@@ -1,0 +1,21 @@
+# Render Blueprint — deploys Quant Poker Trainer as a STATIC SITE.
+# The app is a client-only SPA, so it builds to ./dist and is served over Render's CDN.
+# No Vite server runs in production (so the "host not allowed" error cannot occur).
+#
+# To use: in Render, New > Blueprint, point it at this repo. Or configure a Static Site
+# manually with the same Build Command / Publish Directory below.
+services:
+  - type: web
+    name: quantpoker
+    runtime: static
+    buildCommand: npm install --include=dev && npm run build
+    staticPublishPath: ./dist
+    # SPA fallback so any path resolves to index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
