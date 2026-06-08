@@ -1,0 +1,25 @@
+name: Keep Render awake
+
+# Pings the deployed health endpoint so the Render free-tier service doesn't sleep,
+# and wakes it back up if it ever has. Runs from GitHub's infra (external to Render).
+#
+# Notes:
+#  - GitHub cron is best-effort and can be delayed a few minutes under load; */10 stays
+#    comfortably inside Render's 15-minute idle window. Lower to */5 if you still see cold starts.
+#  - GitHub disables scheduled workflows after ~60 days with no repo commits — push
+#    occasionally (or use an external monitor like UptimeRobot) to keep it alive.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {} # lets you trigger a ping manually from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          echo "Pinging at $(date -u)"
+          # --retry handles the ~30-60s cold start if it was asleep; never fail the job.
+          curl -fsS --max-time 90 --retry 4 --retry-all-errors --retry-delay 15 \
+            https://quantpoker.onrender.com/api/health || echo "ping did not return 2xx (cold start?)"
