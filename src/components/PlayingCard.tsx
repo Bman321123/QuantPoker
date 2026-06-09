@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 import { Card as TCard, rankOf, suitOf, RANK_CHARS, SUIT_SYMBOLS, SUIT_COLORS } from "../engine/cards";
 
-type Size = "sm" | "md" | "lg";
+type Size = "sm" | "md" | "lg" | "xl";
 
 const SIZES: Record<Size, string> = {
   sm: "w-9 h-12 text-sm rounded-md",
   md: "w-14 h-20 text-lg rounded-lg",
-  lg: "w-[4.5rem] h-[6.5rem] text-2xl rounded-xl",
+  lg: "w-[4.75rem] h-[6.75rem] text-2xl rounded-xl",
+  xl: "w-[5.5rem] h-[7.75rem] text-3xl rounded-xl",
 };
 
 function rankLabel(r: number): string {
@@ -32,12 +33,11 @@ export function PlayingCard({
         transition={{ delay: index * 0.06, type: "spring", stiffness: 320, damping: 26 }}
         className={`${SIZES[size]} relative shadow-card border border-white/10`}
         style={{
-          background:
-            "repeating-linear-gradient(45deg,#1b2a4a 0 6px,#16223c 6px 12px)",
+          background: "repeating-linear-gradient(45deg,#000000 0 7px,#0e0e10 7px 14px)",
         }}
       >
         <div className="absolute inset-0 grid place-items-center">
-          <div className="h-3 w-3 rounded-full bg-gradient-to-br from-violet-glow to-cyan-glow opacity-80" />
+          <div className="h-3 w-3 rounded-full bg-gradient-to-br from-violet-glow to-cyan-glow opacity-90" />
         </div>
       </motion.div>
     );
@@ -69,7 +69,5 @@ export function PlayingCard({
 }
 
 export function CardSlot({ size = "md" }: { size?: Size }) {
-  return (
-    <div className={`${SIZES[size]} border-2 border-dashed border-white/10 bg-white/[0.02]`} />
-  );
+  return <div className={`${SIZES[size]} border border-white/10 bg-black/30`} />;
 }

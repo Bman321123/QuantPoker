@@ -56,7 +56,8 @@ interface StoreState {
   // persisted
   level: Level;
   testMe: boolean;
-  showLine: boolean;
+  coach: boolean; // show live reads + recommended action in the side panel
+  guard: boolean; // intervene with a Socratic warning before a clearly-bad action
   stats: Stats;
   mastery: Partial<Record<TopicId, TopicMastery>>;
   history: DecisionRecord[];
@@ -73,7 +74,8 @@ interface StoreState {
   // settings actions
   setLevel: (l: Level) => void;
   toggleTestMe: () => void;
-  toggleShowLine: () => void;
+  toggleCoach: () => void;
+  toggleGuard: () => void;
   setScreen: (s: Screen) => void;
   finishOnboarding: () => void;
   resetStats: () => void;
@@ -93,7 +95,8 @@ export const useStore = create<StoreState>()(
     (set, get) => ({
       level: "beginner",
       testMe: true,
-      showLine: true,
+      coach: true,
+      guard: true,
       stats: emptyStats(),
       mastery: {},
       history: [],
@@ -108,7 +111,8 @@ export const useStore = create<StoreState>()(
 
       setLevel: (l) => set({ level: l }),
       toggleTestMe: () => set((s) => ({ testMe: !s.testMe })),
-      toggleShowLine: () => set((s) => ({ showLine: !s.showLine })),
+      toggleCoach: () => set((s) => ({ coach: !s.coach })),
+      toggleGuard: () => set((s) => ({ guard: !s.guard })),
       setScreen: (screen) => set({ screen }),
       finishOnboarding: () => set({ onboarded: true }),
       resetStats: () => set({ stats: emptyStats(), mastery: {}, history: [] }),
@@ -168,7 +172,8 @@ export const useStore = create<StoreState>()(
       partialize: (s) => ({
         level: s.level,
         testMe: s.testMe,
-        showLine: s.showLine,
+        coach: s.coach,
+        guard: s.guard,
         stats: s.stats,
         mastery: s.mastery,
         history: s.history,

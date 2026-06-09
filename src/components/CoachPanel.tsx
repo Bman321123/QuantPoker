@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useStore } from "../store/useStore";
 import { DecisionView, HandState } from "../game/types";
-import { Level, Verdict, streetTip, Tone, explainLine, LineMath } from "../engine/coach";
+import { Level, Verdict, streetTip, Tone, explainLine } from "../engine/coach";
 import { potOdds, pct } from "../engine/theory";
+import { SolutionModal } from "./SolutionModal";
+import { LineMath } from "../engine/coach";
 
 const TONE_CLASS: Record<Tone, { ring: string; text: string; dot: string }> = {
   perfect: { ring: "border-emerald-glow/40 bg-emerald-glow/10", text: "text-emerald-200", dot: "bg-emerald-glow" },
@@ -24,70 +26,30 @@ function Read({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function MathBlock({ math }: { math: LineMath }) {
-  const [showShortcuts, setShowShortcuts] = useState(false);
+function MiniEvBars({ math }: { math: LineMath }) {
   const evs = math.evTable.map((a) => a.ev);
   const max = Math.max(...evs);
   const min = Math.min(...evs, 0);
   const span = max - min || 1;
-
   return (
-    <div className="rounded-xl border border-emerald-glow/25 bg-emerald-glow/[0.06] p-3">
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
-          Recommended
-        </span>
-        <span className="text-sm font-bold text-white">{math.bestLabel}</span>
-      </div>
-      <p className="mt-1 text-xs leading-relaxed text-white/65">{math.summary}</p>
-
-      {/* equations */}
-      <div className="mt-2.5 space-y-1">
-        {math.steps.map((s, i) => (
-          <div key={i} className="flex items-baseline gap-2 text-xs">
-            <span className="w-24 shrink-0 text-white/45">{s.label}</span>
-            <span className="chip-num text-white/85">{s.expr}</span>
+    <div className="space-y-1">
+      {math.evTable.map((a, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className={`w-[4.5rem] shrink-0 truncate text-xs ${a.best ? "font-bold text-emerald-200" : "text-white/60"}`}>
+            {a.label}
+          </span>
+          <div className="relative h-1.5 flex-1 rounded-full bg-white/5">
+            <div
+              className={`absolute top-0 h-full rounded-full ${a.best ? "bg-emerald-glow" : "bg-white/25"}`}
+              style={{ left: `${((Math.min(0, a.ev) - min) / span) * 100}%`, width: `${(Math.abs(a.ev) / span) * 100}%` }}
+            />
           </div>
-        ))}
-      </div>
-
-      {/* EV across the legal actions */}
-      <div className="mt-3 space-y-1">
-        <div className="text-[10px] uppercase tracking-wide text-white/35">EV by action (bb)</div>
-        {math.evTable.map((a, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className={`w-20 shrink-0 text-xs ${a.best ? "font-bold text-emerald-200" : "text-white/60"}`}>
-              {a.label}
-            </span>
-            <div className="relative h-2 flex-1 rounded-full bg-white/5">
-              <div
-                className={`absolute top-0 h-full rounded-full ${a.best ? "bg-emerald-glow" : "bg-white/25"}`}
-                style={{ left: `${((Math.min(0, a.ev) - min) / span) * 100}%`, width: `${(Math.abs(a.ev) / span) * 100}%` }}
-              />
-            </div>
-            <span className={`chip-num w-12 text-right text-xs ${a.best ? "text-emerald-200" : "text-white/50"}`}>
-              {a.ev >= 0 ? "+" : ""}
-              {a.ev.toFixed(2)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <button
-        onClick={() => setShowShortcuts((v) => !v)}
-        className="mt-2 text-[11px] font-semibold text-cyan-200/80 hover:text-cyan-100"
-      >
-        {showShortcuts ? "Hide shortcuts" : "Equity & sizing shortcuts"}
-      </button>
-      {showShortcuts && (
-        <ul className="mt-1.5 space-y-1">
-          {math.shortcuts.map((s, i) => (
-            <li key={i} className="text-[11px] leading-relaxed text-white/55">
-              • {s}
-            </li>
-          ))}
-        </ul>
-      )}
+          <span className={`chip-num w-11 text-right text-[11px] ${a.best ? "text-emerald-200" : "text-white/45"}`}>
+            {a.ev >= 0 ? "+" : ""}
+            {a.ev.toFixed(2)}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -103,15 +65,9 @@ export function CoachPanel({
   level: Level;
   hand: HandState;
 }) {
-  const showLine = useStore((s) => s.showLine);
-  const [revealed, setRevealed] = useState(false);
-
-  // reset the on-demand reveal whenever a new decision comes up
-  useEffect(() => {
-    setRevealed(false);
-  }, [hand.street, hand.board.length, hand.toCall, hand.awaiting]);
-
-  const lineShown = showLine || revealed;
+  const coach = useStore((s) => s.coach);
+  const guard = useStore((s) => s.guard);
+  const [solutionOpen, setSolutionOpen] = useState(false);
   const math = decision ? explainLine(decision.coachCtx) : null;
 
   return (
@@ -121,7 +77,7 @@ export function CoachPanel({
         <span className="text-[10px] uppercase tracking-widest text-white/30">heuristic</span>
       </div>
 
-      {decision && (
+      {decision && coach && (
         <>
           <div className="flex gap-2">
             <Read label="Your equity" value={pct(decision.equity, 0)} accent="#10B981" />
@@ -136,18 +92,31 @@ export function CoachPanel({
             )}
           </div>
 
-          <p className="text-sm leading-relaxed text-white/70">{streetTip(decision.coachCtx, level)}</p>
+          <p className="text-sm leading-relaxed text-white/65">{streetTip(decision.coachCtx, level)}</p>
 
-          {!lineShown && (
-            <button
-              onClick={() => setRevealed(true)}
-              className="self-start text-xs font-semibold text-violet-200/80 hover:text-violet-100 transition"
-            >
-              Stuck? Show the line + math
-            </button>
+          {math && (
+            <div className="rounded-xl border border-emerald-glow/25 bg-emerald-glow/[0.06] p-3.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Recommended</span>
+                <span className="text-base font-bold text-white">{math.bestLabel}</span>
+              </div>
+              <MiniEvBars math={math} />
+              <button
+                onClick={() => setSolutionOpen(true)}
+                className="btn mt-2.5 w-full bg-ink-900/40 border border-white/10 text-emerald-100/90 !py-2 text-xs"
+              >
+                Full solution &amp; equations →
+              </button>
+            </div>
           )}
-          {lineShown && math && <MathBlock math={math} />}
         </>
+      )}
+
+      {decision && !coach && (
+        <div className="rounded-xl border border-white/10 bg-ink-800/50 px-3.5 py-3 text-xs leading-relaxed text-white/50">
+          Coach is off — you're playing by feel.{" "}
+          {guard ? "Guard will step in before a clear mistake." : "Turn on Guard to be warned before mistakes."}
+        </div>
       )}
 
       {verdict && (
@@ -169,48 +138,23 @@ export function CoachPanel({
         </div>
       )}
 
-      {hand.awaiting === "done" && hand.result && <ResultBlock result={hand.result} hand={hand} />}
-    </div>
-  );
-}
-
-function ResultBlock({ result, hand }: { result: HandState["result"]; hand: HandState }) {
-  if (!result) return null;
-  const won = result.heroDelta > 0.05;
-  const lost = result.heroDelta < -0.05;
-  const headline = won ? "You won" : lost ? "You lost" : "No pot";
-
-  const runoutNote = result.wonByFold
-    ? result.showdownWinner === "hero"
-      ? "Folded early — but on this run-out you had the best hand."
-      : result.showdownWinner === "villain"
-      ? "Folded early — on this run-out villain had the best hand."
-      : "Folded early — this run-out would have chopped."
-    : null;
-
-  return (
-    <div className="rounded-xl border border-white/10 bg-ink-800/70 px-3.5 py-3">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-white/80">{headline}</span>
-        <span className={`chip-num text-sm font-bold ${result.heroDelta >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-          {result.heroDelta >= 0 ? "+" : ""}
-          {result.heroDelta.toFixed(1)} bb
-        </span>
-      </div>
-      <p className="mt-1 text-xs text-white/50">{result.reason}</p>
-
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <div className="rounded-lg bg-ink-900/60 px-2.5 py-1.5">
-          <div className="text-[10px] uppercase tracking-wide text-white/35">You</div>
-          <div className="text-xs font-semibold text-white/85">{result.heroHandLabel}</div>
+      {hand.awaiting === "done" && hand.result && (
+        <div className="rounded-xl border border-white/10 bg-ink-800/70 px-3.5 py-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-ink-900/60 px-2.5 py-1.5">
+              <div className="text-[10px] uppercase tracking-wide text-white/35">You</div>
+              <div className="text-xs font-semibold text-white/85">{hand.result.heroHandLabel}</div>
+            </div>
+            <div className="rounded-lg bg-ink-900/60 px-2.5 py-1.5">
+              <div className="text-[10px] uppercase tracking-wide text-white/35">Villain</div>
+              <div className="text-xs font-semibold text-white/85">{hand.result.villainHandLabel}</div>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-white/50">{hand.result.reason}</p>
         </div>
-        <div className="rounded-lg bg-ink-900/60 px-2.5 py-1.5">
-          <div className="text-[10px] uppercase tracking-wide text-white/35">Villain</div>
-          <div className="text-xs font-semibold text-white/85">{result.villainHandLabel}</div>
-        </div>
-      </div>
+      )}
 
-      {runoutNote && <p className="mt-2 text-[11px] leading-relaxed text-white/40">{runoutNote}</p>}
+      {solutionOpen && math && <SolutionModal math={math} onClose={() => setSolutionOpen(false)} />}
     </div>
   );
 }

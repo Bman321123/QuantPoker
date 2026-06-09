@@ -8,7 +8,11 @@ import { RangeGrid } from "./components/RangeGrid";
 import { QuizCard } from "./components/QuizCard";
 import { Dashboard } from "./components/Dashboard";
 import { Onboarding } from "./components/Onboarding";
+import { InterventionModal } from "./components/InterventionModal";
 import { countCombos } from "./engine/combos";
+import { evLoss } from "./engine/ev";
+
+const GUARD_THRESHOLD = 0.3; // bb of EV loss that triggers a Guard intervention
 
 export default function App() {
   const {
@@ -18,6 +22,7 @@ export default function App() {
     decision,
     lastVerdict,
     level,
+    guard,
     quiz,
     screen,
     setScreen,
@@ -29,11 +34,23 @@ export default function App() {
   } = useStore();
 
   const [rangeOpen, setRangeOpen] = useState(true);
+  const [pendingIdx, setPendingIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (onboarded && !hand) startHand();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onboarded]);
+
+  function handleAct(idx: number) {
+    if (guard && decision) {
+      const loss = evLoss(decision.evResult, idx);
+      if (loss >= GUARD_THRESHOLD && idx !== decision.evResult.bestIndex) {
+        setPendingIdx(idx);
+        return;
+      }
+    }
+    act(idx);
+  }
 
   if (!onboarded) {
     return (
@@ -61,9 +78,9 @@ export default function App() {
           </button>
         </div>
       ) : (
-        <main className="flex-1 overflow-auto">
-          <div className="mx-auto grid max-w-6xl gap-4 p-4 lg:grid-cols-[1fr_360px]">
-            <section className="flex flex-col gap-4">
+        <main className="flex-1 overflow-auto lg:overflow-hidden">
+          <div className="mx-auto grid min-h-0 max-w-[1500px] gap-5 p-5 lg:h-full lg:grid-cols-[minmax(0,1fr)_400px]">
+            <section className="flex min-h-0 flex-col gap-4">
               <div className="flex items-center justify-between px-1">
                 <div className="text-xs uppercase tracking-widest text-white/40">
                   {hand.street} · 100bb deep · BTN vs BB
@@ -71,11 +88,13 @@ export default function App() {
                 <div className="chip-num text-xs text-white/30">{hand.id.split("_")[0]}</div>
               </div>
 
-              <Table hand={hand} />
+              <div className="grid min-h-0 flex-1 place-items-center">
+                <Table hand={hand} />
+              </div>
 
               <div className="glass rounded-2xl p-4">
                 {hand.awaiting === "hero" && decision ? (
-                  <ActionBar decision={decision} onAct={act} />
+                  <ActionBar decision={decision} onAct={handleAct} />
                 ) : hand.awaiting === "done" ? (
                   <div className="flex flex-wrap items-center gap-3">
                     <button
@@ -95,7 +114,7 @@ export default function App() {
               </div>
             </section>
 
-            <aside className="flex flex-col gap-4">
+            <aside className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
               {quiz && <QuizCard quiz={quiz} onAnswer={answerQuiz} onSkip={skipQuiz} />}
 
               <div className="glass rounded-2xl p-4">
@@ -125,6 +144,24 @@ export default function App() {
             </aside>
           </div>
         </main>
+      )}
+
+      {pendingIdx !== null && decision && hand?.awaiting === "hero" && (
+        <InterventionModal
+          decision={decision}
+          idx={pendingIdx}
+          onRethink={() => setPendingIdx(null)}
+          onProceed={() => {
+            const i = pendingIdx;
+            setPendingIdx(null);
+            act(i);
+          }}
+          onBest={() => {
+            const b = decision.evResult.bestIndex;
+            setPendingIdx(null);
+            act(b);
+          }}
+        />
       )}
     </div>
   );

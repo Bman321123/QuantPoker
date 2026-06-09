@@ -26,8 +26,41 @@ function Segmented<T extends string>({
   );
 }
 
+function Toggle({
+  on,
+  onClick,
+  label,
+  color,
+  title,
+}: {
+  on: boolean;
+  onClick: () => void;
+  label: string;
+  color: "emerald" | "violet" | "gold";
+  title: string;
+}) {
+  const onCls = {
+    emerald: "border-emerald-glow/40 bg-emerald-glow/15 text-emerald-100",
+    violet: "border-violet-glow/40 bg-violet-glow/15 text-violet-100",
+    gold: "border-gold-glow/40 bg-gold-glow/15 text-amber-100",
+  }[color];
+  const dot = { emerald: "bg-emerald-glow", violet: "bg-violet-glow", gold: "bg-gold-glow" }[color];
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+        on ? onCls : "border-white/10 bg-ink-800/80 text-white/45"
+      }`}
+    >
+      <span className={`h-2 w-2 rounded-full ${on ? dot : "bg-white/25"}`} />
+      {label}
+    </button>
+  );
+}
+
 export function TopBar() {
-  const { level, setLevel, testMe, toggleTestMe, showLine, toggleShowLine, screen, setScreen } =
+  const { level, setLevel, testMe, toggleTestMe, coach, toggleCoach, guard, toggleGuard, screen, setScreen } =
     useStore();
 
   return (
@@ -42,7 +75,7 @@ export function TopBar() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <Segmented
           value={level}
           onChange={(l) => setLevel(l)}
@@ -51,31 +84,9 @@ export function TopBar() {
             { id: "pro", label: "Pro" },
           ]}
         />
-
-        <button
-          onClick={toggleShowLine}
-          title="Show the engine's recommended action + the math behind it"
-          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-            showLine
-              ? "border-emerald-glow/40 bg-emerald-glow/15 text-emerald-100"
-              : "border-white/10 bg-ink-800/80 text-white/50"
-          }`}
-        >
-          <span className={`h-2 w-2 rounded-full ${showLine ? "bg-emerald-glow" : "bg-white/30"}`} />
-          Show line
-        </button>
-
-        <button
-          onClick={toggleTestMe}
-          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-            testMe
-              ? "border-violet-glow/40 bg-violet-glow/15 text-violet-100"
-              : "border-white/10 bg-ink-800/80 text-white/50"
-          }`}
-        >
-          <span className={`h-2 w-2 rounded-full ${testMe ? "bg-violet-glow" : "bg-white/30"}`} />
-          Test me
-        </button>
+        <Toggle on={coach} onClick={toggleCoach} label="Coach" color="emerald" title="Show live reads + the recommended line" />
+        <Toggle on={guard} onClick={toggleGuard} label="Guard" color="gold" title="Warn me before a clearly suboptimal action and walk me through it" />
+        <Toggle on={testMe} onClick={toggleTestMe} label="Test me" color="violet" title="Pop quiz me on the math mid-hand" />
 
         <Segmented
           value={screen}
