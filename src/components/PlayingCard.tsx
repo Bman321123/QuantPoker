@@ -52,7 +52,7 @@ export function PlayingCard({
       initial={{ opacity: 0, y: -18, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: index * 0.06, type: "spring", stiffness: 320, damping: 24 }}
-      className={`${SIZES[size]} relative bg-white shadow-card select-none`}
+      className={`${SIZES[size]} relative select-none border border-white/15 bg-gradient-to-br from-[#23262d] to-[#0c0d10] shadow-card`}
     >
       <div className="absolute top-1 left-1.5 leading-none font-bold" style={{ color }}>
         <div>{rankLabel(r)}</div>
