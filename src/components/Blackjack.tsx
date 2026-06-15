@@ -242,7 +242,7 @@ export function Blackjack() {
   const ctPct = bjStats.countTotal ? Math.round((bjStats.countCorrect / bjStats.countTotal) * 100) : 0;
 
   return (
-    <div className="mx-auto max-w-[1100px] p-5">
+    <div className="mx-auto max-w-[1280px] p-5">
       {/* header strip */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="text-xs uppercase tracking-widest text-white/40">
@@ -258,9 +258,9 @@ export function Blackjack() {
         </div>
       </div>
 
-      <div className="felt-surface relative overflow-hidden rounded-[2rem] px-6 py-7">
+      <div className="felt-surface relative flex min-h-[520px] flex-col items-center justify-center gap-9 overflow-hidden rounded-[2.5rem] px-6 py-12">
         {st.shuffled && st.phase !== "bet" && (
-          <div className="mb-3 text-center text-[11px] font-semibold uppercase tracking-wider text-amber-200/80">
+          <div className="absolute inset-x-0 top-4 text-center text-[11px] font-semibold uppercase tracking-wider text-amber-200/80">
             ♻ New shoe shuffled — count reset to 0
           </div>
         )}
@@ -270,18 +270,18 @@ export function Blackjack() {
           <span className="text-[10px] uppercase tracking-widest text-white/40">
             Dealer{!st.hideHole && st.dealer.length > 0 && ` · ${handTotal(st.dealer).total}`}
           </span>
-          <div className="flex gap-2">
+          <div className="flex gap-2.5">
             {st.dealer.length === 0 ? (
               <>
-                <PlayingCard faceDown size="md" index={0} />
-                <PlayingCard faceDown size="md" index={1} />
+                <PlayingCard faceDown size="lg" index={0} />
+                <PlayingCard faceDown size="lg" index={1} />
               </>
             ) : (
               st.dealer.map((c, i) =>
                 i === 1 && st.hideHole ? (
-                  <PlayingCard key="hole" faceDown size="md" index={i} />
+                  <PlayingCard key="hole" faceDown size="lg" index={i} />
                 ) : (
-                  <PlayingCard key={`${c}-${i}`} card={c} size="md" index={i} />
+                  <PlayingCard key={`${c}-${i}`} card={c} size="lg" index={i} />
                 )
               )
             )}
@@ -289,7 +289,7 @@ export function Blackjack() {
         </div>
 
         {/* Player hands */}
-        <div className="mt-7 flex flex-wrap items-start justify-center gap-6">
+        <div className="flex flex-wrap items-start justify-center gap-7">
           {st.hands.length === 0 ? (
             <div className="text-sm text-white/40">Place your bet to deal.</div>
           ) : (
@@ -299,41 +299,52 @@ export function Blackjack() {
           )}
         </div>
 
-        {/* Net result */}
+        {/* Count quiz / result — pops up on the felt */}
         {(st.phase === "count" || st.phase === "done") && (
-          <div className="mt-5 text-center">
-            {st.banner && <div className="mb-1 text-sm font-semibold text-white/80">{st.banner}</div>}
-            <span className={`chip-num text-lg font-bold ${netThisHand > 0 ? "text-emerald-200" : netThisHand < 0 ? "text-rose-200" : "text-white/70"}`}>
-              {netThisHand >= 0 ? "+" : ""}
-              {fmt(netThisHand)}
-            </span>
+          <div className="absolute inset-0 z-20 grid place-items-center p-4">
+            <div className="absolute inset-0 bg-ink-900/55 backdrop-blur-[1px]" />
+            <div className="relative w-full max-w-md rounded-2xl border border-white/15 bg-ink-900/95 p-5 shadow-2xl">
+              <div className="mb-3 text-center">
+                {st.banner && <div className="mb-1 text-sm font-semibold text-white/80">{st.banner}</div>}
+                <span
+                  className={`chip-num text-xl font-bold ${
+                    netThisHand > 0 ? "text-emerald-200" : netThisHand < 0 ? "text-rose-200" : "text-white/70"
+                  }`}
+                >
+                  {netThisHand >= 0 ? "+" : ""}
+                  {fmt(netThisHand)}
+                </span>
+              </div>
+              {st.phase === "count" ? (
+                <CountQuiz value={countInput} setValue={setCountInput} onSubmit={submitCount} />
+              ) : (
+                st.countFeedback && (
+                  <CountResult fb={st.countFeedback} trueCount={st.trueAtEnd} decksLeft={decksRemaining(shoeRef.current)} onNext={nextHand} />
+                )
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Controls */}
-      <div className="glass mt-4 rounded-2xl p-4">
-        {st.phase === "bet" && <BetControls bankroll={bankroll} tc={tcNow} recUnits={recUnits} bet={st.bet} onDeal={deal} hint={hint} setHint={setHint} />}
-
-        {st.phase === "act" && (
-          <ActControls
-            state={st}
-            hint={hint}
-            setHint={setHint}
-            canDouble={st.hands[st.active].cards.length === 2 && !st.hands[st.active].splitAces && affordable(st.hands, st.hands[st.active].bet)}
-            canSplit={isPair(st.hands[st.active].cards) && st.hands.length < 4 && !st.hands[st.active].splitAces && affordable(st.hands, st.hands[st.active].bet)}
-            onAct={act}
-          />
-        )}
-
-        {st.phase === "count" && (
-          <CountQuiz value={countInput} setValue={setCountInput} onSubmit={submitCount} />
-        )}
-
-        {st.phase === "done" && st.countFeedback && (
-          <CountResult fb={st.countFeedback} trueCount={st.trueAtEnd} decksLeft={decksRemaining(shoeRef.current)} onNext={nextHand} />
-        )}
-      </div>
+      {/* Controls (bet & play live below the felt; the count step pops up on the felt) */}
+      {(st.phase === "bet" || st.phase === "act") && (
+        <div className="glass mt-4 rounded-2xl p-4">
+          {st.phase === "bet" && (
+            <BetControls bankroll={bankroll} tc={tcNow} recUnits={recUnits} bet={st.bet} onDeal={deal} hint={hint} setHint={setHint} />
+          )}
+          {st.phase === "act" && (
+            <ActControls
+              state={st}
+              hint={hint}
+              setHint={setHint}
+              canDouble={st.hands[st.active].cards.length === 2 && !st.hands[st.active].splitAces && affordable(st.hands, st.hands[st.active].bet)}
+              canSplit={isPair(st.hands[st.active].cards) && st.hands.length < 4 && !st.hands[st.active].splitAces && affordable(st.hands, st.hands[st.active].bet)}
+              onAct={act}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -359,7 +370,7 @@ function HandView({ hand, active, showOutcome }: { hand: PlayerHand; active: boo
     <div className={`flex flex-col items-center gap-2 rounded-2xl border p-3 transition ${active ? "border-emerald-glow/60 bg-emerald-glow/5 shadow-glow" : "border-transparent"}`}>
       <div className="flex gap-2">
         {hand.cards.map((c, i) => (
-          <PlayingCard key={`${c}-${i}`} card={c} size="md" index={i} />
+          <PlayingCard key={`${c}-${i}`} card={c} size="lg" index={i} />
         ))}
       </div>
       <div className="flex items-center gap-2">
