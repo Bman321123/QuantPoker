@@ -5,7 +5,8 @@ import { Table } from "./components/Table";
 import { ActionBar } from "./components/ActionBar";
 import { CoachPanel } from "./components/CoachPanel";
 import { RangeGrid } from "./components/RangeGrid";
-import { QuizCard } from "./components/QuizCard";
+import { Training } from "./components/Training";
+import { Blackjack } from "./components/Blackjack";
 import { Dashboard } from "./components/Dashboard";
 import { Onboarding } from "./components/Onboarding";
 import { InterventionModal } from "./components/InterventionModal";
@@ -23,14 +24,11 @@ export default function App() {
     lastVerdict,
     level,
     guard,
-    quiz,
     screen,
     setScreen,
     startHand,
     act,
     nextHand,
-    answerQuiz,
-    skipQuiz,
   } = useStore();
 
   const [rangeOpen, setRangeOpen] = useState(true);
@@ -71,6 +69,14 @@ export default function App() {
         <div className="flex-1 overflow-auto">
           <Dashboard />
         </div>
+      ) : screen === "train" ? (
+        <div className="flex-1 overflow-auto">
+          <Training />
+        </div>
+      ) : screen === "blackjack" ? (
+        <div className="flex-1 overflow-auto">
+          <Blackjack />
+        </div>
       ) : !hand ? (
         <div className="grid flex-1 place-items-center">
           <button onClick={startHand} className="btn bg-emerald-glow/20 border border-emerald-glow/40 text-emerald-100">
@@ -83,7 +89,7 @@ export default function App() {
             <section className="flex min-h-0 flex-col gap-4">
               <div className="flex items-center justify-between px-1">
                 <div className="text-xs uppercase tracking-widest text-white/40">
-                  {hand.street} · 100bb deep · BTN vs BB
+                  {hand.street} · 100bb deep · you're {hand.heroIsButton ? "BTN (in position)" : "BB (out of position)"}
                 </div>
                 <div className="chip-num text-xs text-white/30">{hand.id.split("_")[0]}</div>
               </div>
@@ -115,18 +121,12 @@ export default function App() {
             </section>
 
             <aside className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
-              {quiz && <QuizCard quiz={quiz} onAnswer={answerQuiz} onSkip={skipQuiz} />}
-
-              <div className="glass rounded-2xl p-4">
-                <CoachPanel decision={decision} verdict={lastVerdict} level={level} hand={hand} />
-              </div>
-
               <div className="glass rounded-2xl p-4">
                 <button
                   onClick={() => setRangeOpen((o) => !o)}
                   className="mb-1 flex w-full items-center justify-between text-sm font-semibold text-white/90"
                 >
-                  <span>Range explorer</span>
+                  <span>Villain's possible hands</span>
                   <span className="text-white/40">{rangeOpen ? "▾" : "▸"}</span>
                 </button>
                 {rangeOpen && (
@@ -140,6 +140,10 @@ export default function App() {
                     }
                   />
                 )}
+              </div>
+
+              <div className="glass rounded-2xl p-4">
+                <CoachPanel decision={decision} verdict={lastVerdict} level={level} hand={hand} />
               </div>
             </aside>
           </div>

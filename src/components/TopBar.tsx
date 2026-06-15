@@ -36,15 +36,16 @@ function Toggle({
   on: boolean;
   onClick: () => void;
   label: string;
-  color: "emerald" | "violet" | "gold";
+  color: "emerald" | "violet" | "gold" | "cyan";
   title: string;
 }) {
   const onCls = {
     emerald: "border-emerald-glow/40 bg-emerald-glow/15 text-emerald-100",
     violet: "border-violet-glow/40 bg-violet-glow/15 text-violet-100",
     gold: "border-gold-glow/40 bg-gold-glow/15 text-amber-100",
+    cyan: "border-cyan-glow/40 bg-cyan-glow/15 text-cyan-100",
   }[color];
-  const dot = { emerald: "bg-emerald-glow", violet: "bg-violet-glow", gold: "bg-gold-glow" }[color];
+  const dot = { emerald: "bg-emerald-glow", violet: "bg-violet-glow", gold: "bg-gold-glow", cyan: "bg-cyan-glow" }[color];
   return (
     <button
       onClick={onClick}
@@ -60,8 +61,18 @@ function Toggle({
 }
 
 export function TopBar() {
-  const { level, setLevel, testMe, toggleTestMe, coach, toggleCoach, guard, toggleGuard, screen, setScreen } =
-    useStore();
+  const {
+    level,
+    setLevel,
+    coach,
+    toggleCoach,
+    guard,
+    toggleGuard,
+    revealEquity,
+    toggleRevealEquity,
+    screen,
+    setScreen,
+  } = useStore();
 
   return (
     <header className="flex items-center justify-between gap-4 border-b border-white/5 px-5 py-3">
@@ -76,23 +87,35 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center gap-2.5">
-        <Segmented
-          value={level}
-          onChange={(l) => setLevel(l)}
-          options={[
-            { id: "beginner", label: "Beginner" },
-            { id: "pro", label: "Pro" },
-          ]}
-        />
-        <Toggle on={coach} onClick={toggleCoach} label="Coach" color="emerald" title="Show live reads + the recommended line" />
-        <Toggle on={guard} onClick={toggleGuard} label="Guard" color="gold" title="Warn me before a clearly suboptimal action and walk me through it" />
-        <Toggle on={testMe} onClick={toggleTestMe} label="Test me" color="violet" title="Pop quiz me on the math mid-hand" />
+        {screen === "play" && (
+          <>
+            <Segmented
+              value={level}
+              onChange={(l) => setLevel(l)}
+              options={[
+                { id: "beginner", label: "Beginner" },
+                { id: "pro", label: "Pro" },
+              ]}
+            />
+            <Toggle on={coach} onClick={toggleCoach} label="Coach" color="emerald" title="Show live reads + the recommended line" />
+            <Toggle on={guard} onClick={toggleGuard} label="Guard" color="gold" title="Warn me before a clearly suboptimal action and walk me through it" />
+            <Toggle
+              on={revealEquity}
+              onClick={toggleRevealEquity}
+              label="Equity"
+              color="cyan"
+              title="Show your equity vs the equity needed to call — turn off to estimate it yourself"
+            />
+          </>
+        )}
 
         <Segmented
           value={screen}
           onChange={(s) => setScreen(s)}
           options={[
             { id: "play", label: "Table" },
+            { id: "train", label: "Train" },
+            { id: "blackjack", label: "Blackjack" },
             { id: "dashboard", label: "Progress" },
           ]}
         />

@@ -21,7 +21,10 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
         <ul className="mt-5 space-y-3 text-sm text-white/75">
           <li className="flex gap-3">
             <Dot c="#10B981" />
-            <span>Play randomized No-Limit Hold'em hands vs one villain, on the button.</span>
+            <span>
+              Play heads-up No-Limit Hold'em vs a villain that plays the numbers — seats (button / big blind)
+              randomized every hand.
+            </span>
           </li>
           <li className="flex gap-3">
             <Dot c="#22D3EE" />
@@ -33,8 +36,8 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
           <li className="flex gap-3">
             <Dot c="#8B5CF6" />
             <span>
-              Get <b className="text-white">tested mid-hand</b> on the real math — combos, equity, pot odds, MDF —
-              with a guided walk-through whenever you want it.
+              Drill the real math in the <b className="text-white">Train tab</b> — combos, equity, pot odds, MDF —
+              on real dealt scenarios, with a guided walk-through whenever you want it.
             </span>
           </li>
           <li className="flex gap-3">

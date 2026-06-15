@@ -98,9 +98,14 @@ export function streetTip(ctx: CoachContext, level: Level): string {
   const posWord = ctx.heroInPosition ? "in position" : "out of position";
   switch (ctx.street) {
     case "preflop":
+      if (ctx.heroInPosition) {
+        return level === "pro"
+          ? `On the button you act last postflop; open wide for value and to steal, and 3-bet to deny the BB a cheap flop.`
+          : `You're on the button — you act last after the flop, so you can profitably play more hands.`;
+      }
       return level === "pro"
-        ? `On the button you realize equity well ${posWord}; open your range for value and steal.`
-        : `You're on the button — you act last all hand, so you can play more hands profitably.`;
+        ? `In the big blind you're out of position; defend by price (call wider vs small raises) and 3-bet your strongest hands.`
+        : `You're in the big blind — you act first after the flop, so you need a stronger reason to continue.`;
     case "flop":
       return level === "pro"
         ? `You have ~${eq} equity ${posWord}. Weigh range vs nut advantage before sizing.`

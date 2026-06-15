@@ -67,6 +67,7 @@ export function CoachPanel({
 }) {
   const coach = useStore((s) => s.coach);
   const guard = useStore((s) => s.guard);
+  const revealEquity = useStore((s) => s.revealEquity);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const math = decision ? explainLine(decision.coachCtx) : null;
 
@@ -80,15 +81,23 @@ export function CoachPanel({
       {decision && coach && (
         <>
           <div className="flex gap-2">
-            <Read label="Your equity" value={pct(decision.equity, 0)} accent="#10B981" />
-            {decision.coachCtx.toCall > 0 ? (
-              <Read
-                label="Need to call"
-                value={pct(potOdds(decision.coachCtx.toCall, decision.coachCtx.pot), 0)}
-                accent="#FF5C7A"
-              />
+            {revealEquity ? (
+              <>
+                <Read label="Your equity" value={pct(decision.equity, 0)} accent="#10B981" />
+                {decision.coachCtx.toCall > 0 ? (
+                  <Read
+                    label="Need to call"
+                    value={pct(potOdds(decision.coachCtx.toCall, decision.coachCtx.pot), 0)}
+                    accent="#FF5C7A"
+                  />
+                ) : (
+                  <Read label="Villain combos" value={`${decision.combos.total}`} accent="#22D3EE" />
+                )}
+              </>
             ) : (
-              <Read label="Villain combos" value={`${decision.combos.total}`} accent="#22D3EE" />
+              <div className="flex-1 rounded-lg bg-ink-800/60 border border-dashed border-white/10 px-3 py-2 text-[11px] leading-snug text-white/35">
+                Equity hidden — estimate your equity vs the pot odds yourself, then check the verdict.
+              </div>
             )}
           </div>
 

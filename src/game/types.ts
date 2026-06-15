@@ -28,11 +28,21 @@ export interface HandState {
   villainStack: number;
   hero: Combo;
   villain: Combo; // hidden from UI until showdown
-  villainRange: Range; // current narrowed range
-  toCall: number;
-  betInPlay?: number;
-  potBeforeBet?: number;
-  heroInPosition: boolean;
+  villainRange: Range; // current narrowed villain range (what villain genuinely holds)
+  heroRange: Range; // the range the villain believes the hero represents (for its decisions)
+
+  // position & betting-round state
+  heroIsButton: boolean; // hero is the button/SB this hand (acts first preflop, in position postflop)
+  heroInPosition: boolean; // postflop in position (= heroIsButton)
+  betToMatch: number; // highest commitment by either player this street
+  heroStreetInvested: number; // chips hero has put in THIS street
+  villainStreetInvested: number; // chips villain has put in THIS street
+  streetAgg: number; // number of bets/raises this street (preflop: the open is the first)
+  lastAggressor?: "hero" | "villain";
+
+  toCall: number; // chips hero must call right now (betToMatch - heroStreetInvested, ≥ 0)
+  betInPlay?: number; // the bet the hero is facing (for the coach/quiz)
+  potBeforeBet?: number; // pot before that bet
   villainChecked: boolean; // villain has checked to hero this street
   awaiting: "hero" | "done";
   log: string[];

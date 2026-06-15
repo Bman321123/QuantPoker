@@ -13,6 +13,7 @@ function Pod({
   stack,
   active,
   tag,
+  dealer,
   children,
 }: {
   label: string;
@@ -20,16 +21,25 @@ function Pod({
   stack: number;
   active?: boolean;
   tag?: string;
+  dealer?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="relative flex flex-col items-center gap-2">
       <div className="flex gap-1.5">{children}</div>
       <div
         className={`flex items-center gap-2 rounded-full px-3 py-1 border transition ${
           active ? "border-emerald-glow/60 bg-emerald-glow/10 shadow-glow" : "border-white/10 bg-ink-800/80"
         }`}
       >
+        {dealer && (
+          <span
+            className="grid h-5 w-5 place-items-center rounded-full bg-white text-[10px] font-black text-ink-900 shadow"
+            title="Dealer button"
+          >
+            D
+          </span>
+        )}
         <span className="text-xs font-semibold text-white/90">{label}</span>
         <span className="text-[10px] uppercase tracking-wide text-white/40">{sub}</span>
         <Stack bb={stack} />
@@ -95,6 +105,8 @@ export function Table({ hand }: { hand: HandState }) {
   const heroTurn = hand.awaiting === "hero";
   const heroTag = done ? hand.result?.heroHandLabel : undefined;
   const villainTag = done ? hand.result?.villainHandLabel : undefined;
+  const heroSeat = hand.heroIsButton ? "BTN" : "BB";
+  const villainSeat = hand.heroIsButton ? "BB" : "BTN";
 
   return (
     <div className="felt-surface relative w-full overflow-hidden rounded-[2.5rem] px-6 py-8">
@@ -106,7 +118,14 @@ export function Table({ hand }: { hand: HandState }) {
 
       {/* Villain */}
       <div className="relative flex justify-center">
-        <Pod label="Villain" sub="BB" stack={hand.villainStack} active={!heroTurn && !done} tag={villainTag}>
+        <Pod
+          label="Villain"
+          sub={villainSeat}
+          stack={hand.villainStack}
+          active={!heroTurn && !done}
+          tag={villainTag}
+          dealer={!hand.heroIsButton}
+        >
           {reveal ? (
             <>
               <PlayingCard card={hand.result!.villainCombo[0]} size="lg" index={0} />
@@ -137,20 +156,10 @@ export function Table({ hand }: { hand: HandState }) {
 
       {/* Hero */}
       <div className="relative flex justify-center">
-        <div className="relative">
-          <Pod label="You" sub="BTN" stack={hand.heroStack} active={heroTurn} tag={heroTag}>
-            <PlayingCard card={hand.hero[0]} size="xl" index={0} />
-            <PlayingCard card={hand.hero[1]} size="xl" index={1} />
-          </Pod>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -right-8 bottom-10 grid h-6 w-6 place-items-center rounded-full bg-white text-[10px] font-black text-ink-900 shadow"
-            title="Dealer button"
-          >
-            D
-          </motion.div>
-        </div>
+        <Pod label="You" sub={heroSeat} stack={hand.heroStack} active={heroTurn} tag={heroTag} dealer={hand.heroIsButton}>
+          <PlayingCard card={hand.hero[0]} size="xl" index={0} />
+          <PlayingCard card={hand.hero[1]} size="xl" index={1} />
+        </Pod>
       </div>
     </div>
   );

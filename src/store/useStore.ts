@@ -3,11 +3,8 @@ import { persist } from "zustand/middleware";
 import { HandState, DecisionView, DecisionRecord, Street } from "../game/types";
 import { newHand, heroDecision, applyHeroAction } from "../game/engine";
 import { Level, Verdict, verdict } from "../engine/coach";
-import { Quiz, applicableTopics, generateQuiz } from "../quiz/questions";
 import { TopicId } from "../quiz/topics";
 import { TopicMastery, updateMastery, emptyMastery } from "../quiz/mastery";
-
-const QUIZ_PROB = 0.7;
 
 interface StreetStat {
   decisions: number;
@@ -50,18 +47,33 @@ function cloneStats(s: Stats): Stats {
   };
 }
 
-export type Screen = "play" | "dashboard";
+export type Screen = "play" | "train" | "blackjack" | "dashboard";
+
+export interface BlackjackStats {
+  hands: number;
+  bsCorrect: number; // basic-strategy decisions matched
+  bsTotal: number;
+  countCorrect: number; // correct running-count answers
+  countTotal: number;
+}
+const emptyBjStats = (): BlackjackStats => ({ hands: 0, bsCorrect: 0, bsTotal: 0, countCorrect: 0, countTotal: 0 });
+export const BJ_START_BANKROLL = 1000;
+export const BJ_UNIT = 10; // $ per betting unit
 
 interface StoreState {
   // persisted
   level: Level;
-  testMe: boolean;
   coach: boolean; // show live reads + recommended action in the side panel
   guard: boolean; // intervene with a Socratic warning before a clearly-bad action
+  revealEquity: boolean; // show the "your equity" vs "equity to call" readout (hide to self-test)
   stats: Stats;
   mastery: Partial<Record<TopicId, TopicMastery>>;
   history: DecisionRecord[];
   onboarded: boolean;
+
+  // blackjack card-counting trainer (persisted)
+  bankroll: number;
+  bjStats: BlackjackStats;
 
   // transient
   screen: Screen;
@@ -69,13 +81,12 @@ interface StoreState {
   decision: DecisionView | null;
   lastVerdict: Verdict | null;
   lastRecord: DecisionRecord | null;
-  quiz: Quiz | null;
 
   // settings actions
   setLevel: (l: Level) => void;
-  toggleTestMe: () => void;
   toggleCoach: () => void;
   toggleGuard: () => void;
+  toggleRevealEquity: () => void;
   setScreen: (s: Screen) => void;
   finishOnboarding: () => void;
   resetStats: () => void;
@@ -85,43 +96,50 @@ interface StoreState {
   act: (idx: number) => void;
   nextHand: () => void;
 
-  // quiz actions
+  // training actions (used by the Train tab)
   answerQuiz: (topic: TopicId, correct: boolean) => void;
-  skipQuiz: () => void;
+
+  // blackjack actions
+  bjAddToBankroll: (delta: number) => void;
+  bjRecordDecision: (correct: boolean) => void;
+  bjRecordCount: (correct: boolean) => void;
+  bjHandPlayed: () => void;
+  bjReset: () => void;
 }
 
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
       level: "beginner",
-      testMe: true,
       coach: true,
       guard: true,
+      revealEquity: true,
       stats: emptyStats(),
       mastery: {},
       history: [],
       onboarded: false,
+
+      bankroll: BJ_START_BANKROLL,
+      bjStats: emptyBjStats(),
 
       screen: "play",
       hand: null,
       decision: null,
       lastVerdict: null,
       lastRecord: null,
-      quiz: null,
 
       setLevel: (l) => set({ level: l }),
-      toggleTestMe: () => set((s) => ({ testMe: !s.testMe })),
       toggleCoach: () => set((s) => ({ coach: !s.coach })),
       toggleGuard: () => set((s) => ({ guard: !s.guard })),
+      toggleRevealEquity: () => set((s) => ({ revealEquity: !s.revealEquity })),
       setScreen: (screen) => set({ screen }),
       finishOnboarding: () => set({ onboarded: true }),
       resetStats: () => set({ stats: emptyStats(), mastery: {}, history: [] }),
 
       startHand: () => {
         const hand = newHand();
-        const decision = heroDecision(hand);
-        set({ hand, decision, lastVerdict: null, lastRecord: null, quiz: null, screen: "play" });
-        maybeQuiz(get, set, decision);
+        const decision = hand.awaiting === "hero" ? heroDecision(hand) : null;
+        set({ hand, decision, lastVerdict: null, lastRecord: null, screen: "play" });
       },
 
       act: (idx) => {
@@ -146,11 +164,10 @@ export const useStore = create<StoreState>()(
         if (state.awaiting === "done") {
           stats.hands += 1;
           stats.netBb += state.result ? state.result.heroDelta : 0;
-          set({ hand: state, decision: null, lastVerdict: v, lastRecord: record, quiz: null, stats, history });
+          set({ hand: state, decision: null, lastVerdict: v, lastRecord: record, stats, history });
         } else {
           const next = heroDecision(state);
           set({ hand: state, decision: next, lastVerdict: v, lastRecord: record, stats, history });
-          maybeQuiz(get, set, next);
         }
       },
 
@@ -162,50 +179,31 @@ export const useStore = create<StoreState>()(
         const stats = cloneStats(get().stats);
         stats.quizAttempts += 1;
         if (correct) stats.quizCorrect += 1;
-        set({ mastery, stats, quiz: null });
+        set({ mastery, stats });
       },
 
-      skipQuiz: () => set({ quiz: null }),
+      bjAddToBankroll: (delta) => set((s) => ({ bankroll: Math.round((s.bankroll + delta) * 100) / 100 })),
+      bjRecordDecision: (correct) =>
+        set((s) => ({ bjStats: { ...s.bjStats, bsTotal: s.bjStats.bsTotal + 1, bsCorrect: s.bjStats.bsCorrect + (correct ? 1 : 0) } })),
+      bjRecordCount: (correct) =>
+        set((s) => ({ bjStats: { ...s.bjStats, countTotal: s.bjStats.countTotal + 1, countCorrect: s.bjStats.countCorrect + (correct ? 1 : 0) } })),
+      bjHandPlayed: () => set((s) => ({ bjStats: { ...s.bjStats, hands: s.bjStats.hands + 1 } })),
+      bjReset: () => set({ bankroll: BJ_START_BANKROLL, bjStats: emptyBjStats() }),
     }),
     {
       name: "quant-poker-v1",
       partialize: (s) => ({
         level: s.level,
-        testMe: s.testMe,
         coach: s.coach,
         guard: s.guard,
+        revealEquity: s.revealEquity,
         stats: s.stats,
         mastery: s.mastery,
         history: s.history,
         onboarded: s.onboarded,
+        bankroll: s.bankroll,
+        bjStats: s.bjStats,
       }),
     }
   )
 );
-
-function maybeQuiz(
-  get: () => StoreState,
-  set: (partial: Partial<StoreState>) => void,
-  decision: DecisionView
-) {
-  if (!get().testMe || Math.random() > QUIZ_PROB) {
-    set({ quiz: null });
-    return;
-  }
-  const topics = applicableTopics(decision.quizCtx);
-  // weak-topic weighting
-  const mastery = get().mastery;
-  const weights = topics.map((id) => 0.12 + (1 - (mastery[id]?.ewma ?? emptyMastery().ewma)));
-  const total = weights.reduce((a, b) => a + b, 0);
-  let x = Math.random() * total;
-  let topic: TopicId | null = topics[0] ?? null;
-  for (let i = 0; i < topics.length; i++) {
-    x -= weights[i];
-    if (x <= 0) {
-      topic = topics[i];
-      break;
-    }
-  }
-  const q = topic ? generateQuiz(decision.quizCtx, topic) : null;
-  set({ quiz: q });
-}

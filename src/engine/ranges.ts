@@ -87,6 +87,36 @@ export const BB_VS_LIMP = parseRange(
     "A2o+, K4o+, Q6o+, J7o+, T7o+, 96o+, 86o+, 75o+, 64o+, 54o"
 );
 
+// ---- Heads-up specific ranges (either player can be the button) ----
+// Heads-up play is much wider than full-ring: the button (small blind) opens a large
+// fraction of hands, and the big blind defends very wide because of the price.
+
+// Button (SB) open-raising range, heads-up — very wide.
+export const HU_SB_OPEN = parseRange(
+  "22+, A2s+, K2s+, Q2s+, J3s+, T5s+, 95s+, 84s+, 74s+, 63s+, 53s+, 43s, " +
+    "A2o+, K2o+, Q5o+, J7o+, T7o+, 97o+, 86o+, 75o+, 64o+, 54o"
+);
+
+// BB flat-calling range vs a button open (the part that just calls — strong hands 3-bet instead).
+export const HU_BB_CALL = parseRange(
+  "22+, A2s+, K2s+, Q5s+, J7s+, T7s+, 96s+, 85s+, 75s+, 64s+, 53s+, 43s, " +
+    "A2o+, K6o+, Q8o+, J8o+, T8o+, 97o+, 87o, 76o, 65o"
+);
+
+// BB 3-bet range vs a button open (linear value + a few suited bluffs).
+export const HU_BB_3BET = parseRange(
+  "88+, ATs+, KTs+, QTs+, JTs, T9s, AJo+, KQo, A5s, A4s, A3s, K9s, 76s, 65s, 54s"
+);
+
+// Range that calls a 3-bet (used by whichever player opened and now faces a 3-bet).
+// Heads-up you defend a wide chunk of your opens vs a 3-bet, not just premiums.
+export const HU_VS_3BET_CALL = parseRange(
+  "22+, A2s+, K9s+, QTs+, JTs, T9s, 98s, 87s, 76s, ATo+, KJo+, KQo, A5s, A4s"
+);
+
+// 4-bet / call-a-4-bet range — tight, mostly stacks off.
+export const HU_4BET = parseRange("QQ+, AKs, AKo, A5s");
+
 export interface NamedRange {
   id: string;
   label: string;
