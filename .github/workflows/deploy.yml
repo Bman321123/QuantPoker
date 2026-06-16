@@ -1,0 +1,40 @@
+name: Deploy to Render
+
+# Why this exists: Render's native GitHub auto-deploy can silently stop firing if its
+# GitHub App loses the webhook / repo access (the toggle still reads "on", but pushes
+# never reach Render). This workflow runs on GitHub's own infrastructure and pokes a
+# Render *Deploy Hook* directly, so deploys keep working regardless of that integration.
+#
+# One-time setup:
+#   1. Render dashboard → your "quantpoker" service → Settings → Deploy Hook → copy the URL.
+#   2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret:
+#        name:  RENDER_DEPLOY_HOOK
+#        value: <the deploy hook URL>
+#   3. Done. Every push to main now triggers a Render deploy. You can also deploy the
+#      current commit on demand from the Actions tab → "Deploy to Render" → "Run workflow".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK secret is not set — skipping."
+            echo "Add it under Settings → Secrets and variables → Actions (see this file's header)."
+            exit 0
+          fi
+          echo "Triggering Render deploy…"
+          code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$HOOK")
+          echo "Render responded HTTP $code"
+          case "$code" in
+            2*) echo "Deploy triggered successfully." ;;
+            *) echo "::error::Render deploy hook returned HTTP $code"; exit 1 ;;
+          esac
